@@ -2,57 +2,53 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = 'dockerhub-creds'
-        IMAGE_FRONTEND = 'akrana2006/frontend:v2'
-        IMAGE_BACKEND  = 'akrana2006/backend:v2'
+        DOCKER_USER = 'akrana2006'
+        DOCKER_PASS = credentials('dockerhub-creds') // DockerHub credentials ID
     }
 
     stages {
-
         stage('Checkout Code') {
             steps {
-                git 'https://github.com/itsakrana/jenkins_projects.git'
+                git url: 'https://github.com/itsakrana/jenkins_projects.git'
             }
         }
 
         stage('Build Docker Images') {
             steps {
-                sh 'docker build -t $IMAGE_FRONTEND ./frontend'
-                sh 'docker build -t $IMAGE_BACKEND ./backend'
+                sh 'docker build -t ${DOCKER_USER}/frontend:v2 ./frontend'
+                sh 'docker build -t ${DOCKER_USER}/backend:v2 ./backend'
             }
         }
 
         stage('Login to DockerHub') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS')]) {
-
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                }
+                sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
             }
         }
 
-        stage('Push Images to DockerHub') {
+        stage('Push Docker Images') {
             steps {
-                sh 'docker push $IMAGE_FRONTEND'
-                sh 'docker push $IMAGE_BACKEND'
+                sh 'docker push ${DOCKER_USER}/frontend:v2'
+                sh 'docker push ${DOCKER_USER}/backend:v2'
             }
         }
 
-        stage('Deploy using Docker Compose') {
+        stage('Deploy with Docker Compose') {
             steps {
-                // Remove old containers and recreate
-                sh 'docker-compose down --remove-orphans || true'
-                sh 'docker-compose up -d --force-recreate'
+                sh '''
+                # Remove any old containers to avoid name conflicts
+                docker rm -f mongo_db backend_app || true
+
+                # Start fresh
+                docker-compose up -d --force-recreate
+                '''
             }
         }
     }
 
     post {
         success {
-            echo '✅ Pipeline executed successfully!'
+            echo '✅ Pipeline completed successfully!'
         }
         failure {
             echo '❌ Pipeline failed!'
