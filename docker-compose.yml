@@ -1,31 +1,27 @@
-version: '3.8'
+version: "3"
 
 services:
-
-  frontend:
-    image: akrana2006/frontend:latest
-    container_name: frontend_app
-    ports:
-      - "8080:80"
-    depends_on:
-      - backend
-    restart: always
-
-  backend:
-    image: akrana2006/backend:latest
-    container_name: backend_app
-    ports:
-      - "3000:3000"
-    depends_on:
-      - mongo
-    restart: always
 
   mongo:
     image: mongo
     container_name: mongo_db
     volumes:
       - mongo_data:/data/db
-    restart: always
+
+  backend:
+    image: akrana2006/backend:v2
+    container_name: backend_app
+    depends_on:
+      - mongo
+
+  frontend:
+    image: akrana2006/frontend:v2
+    container_name: frontend_app
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
 
 volumes:
   mongo_data:
+
