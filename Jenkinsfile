@@ -43,8 +43,9 @@ pipeline {
 
         stage('Deploy using Docker Compose') {
             steps {
-                sh 'docker-compose down || true'
-                sh 'docker-compose up -d'
+                // Remove old containers and recreate
+                sh 'docker-compose down --remove-orphans || true'
+                sh 'docker-compose up -d --force-recreate'
             }
         }
     }
