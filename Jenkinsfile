@@ -2,25 +2,23 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_REPO = "akrana2006"
-        FRONTEND_IMAGE = "frontend"
-        BACKEND_IMAGE  = "backend"
-        TAG = "v2"
+        DOCKERHUB_CREDENTIALS = 'dockerhub-creds'
+        IMAGE_FRONTEND = 'akrana2006/frontend:v2'
+        IMAGE_BACKEND  = 'akrana2006/backend:v2'
     }
 
     stages {
 
         stage('Checkout Code') {
             steps {
-                git branch: 'master',
-                url: 'https://github.com/itsakrana/jenkins_projects.git'
+                git 'https://github.com/itsakrana/jenkins_projects.git'
             }
         }
 
         stage('Build Docker Images') {
             steps {
-                sh 'docker build -t $DOCKERHUB_REPO/$FRONTEND_IMAGE:$TAG ./frontend'
-                sh 'docker build -t $DOCKERHUB_REPO/$BACKEND_IMAGE:$TAG ./backend'
+                sh 'docker build -t $IMAGE_FRONTEND ./frontend'
+                sh 'docker build -t $IMAGE_BACKEND ./backend'
             }
         }
 
@@ -29,8 +27,8 @@ pipeline {
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-creds',
                     usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
+                    passwordVariable: 'DOCKER_PASS')]) {
+
                     sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
                 }
             }
@@ -38,8 +36,8 @@ pipeline {
 
         stage('Push Images to DockerHub') {
             steps {
-                sh 'docker push $DOCKERHUB_REPO/$FRONTEND_IMAGE:$TAG'
-                sh 'docker push $DOCKERHUB_REPO/$BACKEND_IMAGE:$TAG'
+                sh 'docker push $IMAGE_FRONTEND'
+                sh 'docker push $IMAGE_BACKEND'
             }
         }
 
@@ -53,7 +51,7 @@ pipeline {
 
     post {
         success {
-            echo '✅ Pipeline completed successfully!'
+            echo '✅ Pipeline executed successfully!'
         }
         failure {
             echo '❌ Pipeline failed!'
