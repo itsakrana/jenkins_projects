@@ -2,45 +2,61 @@ pipeline {
     agent any
 
     environment {
-        FRONTEND_IMAGE = "akrana2006/frontend"
-        BACKEND_IMAGE = "akrana2006/backend"
-        VERSION = "v${BUILD_NUMBER}"
+        DOCKERHUB_REPO = "akrana2006"
+        FRONTEND_IMAGE = "frontend"
+        BACKEND_IMAGE  = "backend"
+        TAG = "v2"
     }
 
     stages {
 
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                git 'https://github.com/itsakrana/jenkins_projects.git'
+                git branch: 'master',
+                url: 'https://github.com/itsakrana/jenkins_projects.git'
             }
         }
 
-        stage('Build Images') {
+        stage('Build Docker Images') {
             steps {
-                sh 'docker build -t $FRONTEND_IMAGE:$VERSION .'
-                sh 'docker build -t $BACKEND_IMAGE:$VERSION -f backend/Dockerfile .'
+                sh 'docker build -t $DOCKERHUB_REPO/$FRONTEND_IMAGE:$TAG ./frontend'
+                sh 'docker build -t $DOCKERHUB_REPO/$BACKEND_IMAGE:$TAG ./backend'
             }
         }
 
-        stage('Push Images') {
+        stage('Login to DockerHub') {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'USER',
-                    passwordVariable: 'PASS'
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh 'echo $PASS | docker login -u $USER --password-stdin'
-                    sh 'docker push $FRONTEND_IMAGE:$VERSION'
-                    sh 'docker push $BACKEND_IMAGE:$VERSION'
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
                 }
             }
         }
 
-        stage('Deploy') {
+        stage('Push Images to DockerHub') {
+            steps {
+                sh 'docker push $DOCKERHUB_REPO/$FRONTEND_IMAGE:$TAG'
+                sh 'docker push $DOCKERHUB_REPO/$BACKEND_IMAGE:$TAG'
+            }
+        }
+
+        stage('Deploy using Docker Compose') {
             steps {
                 sh 'docker-compose down || true'
                 sh 'docker-compose up -d'
             }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Pipeline completed successfully!'
+        }
+        failure {
+            echo '❌ Pipeline failed!'
         }
     }
 }
