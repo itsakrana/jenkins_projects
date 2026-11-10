@@ -1,0 +1,31 @@
+name: Daily activity
+
+on:
+  schedule:
+    - cron: '30 4 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Make a random number of commits
+        run: |
+          git config user.name "itsakrana"
+          git config user.email "222025851+itsakrana@users.noreply.github.com"
+
+          # Pick from a weighted list: more small numbers, a few big ones
+          COUNT=$(echo "0 1 1 2 2 3 4 6 9" | tr ' ' '\n' | shuf -n 1)
+          echo "Making $COUNT commits today"
+
+          for i in $(seq 1 $COUNT); do
+            echo "Update $(date -u +%F) #$i $RANDOM" >> activity.log
+            git add activity.log
+            git commit -m "chore: update $(date -u +%F) #$i"
+          done
+
+          git push
